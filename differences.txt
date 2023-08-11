@@ -1,0 +1,15 @@
+Final 2023/17/03 Exam Delivery - FRANCESCO RECCHIA - 309559
+
+---List of main changes---
+scanner.jflex:
+        in token2, for the "num" regexp added the numbers from 20 to 199 that were forgotten
+        in the "date" regexp changed the year from 2023 to 2024 
+        in token3 i needed to add some parentesis 
+parser.cup:
+        in header added a final SC after TOK2
+        in purchase added a final SC
+        in p_list i forgot to consider the "quantity" attribute 
+
+In general some formatting was done and i added a method to roud the price to 2 digits after the dot.
+
+The solution provided during the exam does not work in prticular due to the small errors in the scanner, for the rest all the logic has not been changed.

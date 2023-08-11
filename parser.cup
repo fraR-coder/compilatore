@@ -1,0 +1,166 @@
+import java_cup.runtime.*;
+import java.io.InputStreamReader;
+import java.util.*;
+
+
+init with {:
+    symbolTable = new HashMap();
+:};
+
+
+parser code {:
+    public static HashMap<String,HashMap<String,Double>> symbolTable;
+
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol)
+            if (((Symbol)info).left != -1){
+                int line = (((Symbol)info).left)+1;
+                int column = (((Symbol)info).right)+1;
+                System.err.print(" (line "+line+", column "+column+"): ");
+            } else System.err.print(": ");
+        else System.err.print(": ");
+    }
+    /* Return semantic value of symbol in position (position) */
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos+position)).value);
+    }
+
+
+:};
+
+
+action code {:
+    class MyClass {
+        private String val1;
+        private Integer val2;
+
+        void setVal1(String val1) {
+            this.val1 = val1;
+        }
+        void setVal2(Integer val2) {
+            this.val2 =val2;
+        }
+        String getVal1() {
+            return val1;
+        }
+        Integer getVal2() {
+            return val2;
+        }
+    }
+:};
+
+
+
+// Terminals / non Terminals section
+
+terminal SEP,TOK1,TOK2,TOK3;
+terminal SC,CM,MINUS,PERCENT,EURO;
+
+terminal Integer UINT;
+terminal Double UREAL;
+terminal String QSTRING;
+
+
+non terminal prog;
+non terminal header,dresses_sec,dress,shopping_sec,purchase ;
+
+non terminal t1,t2,t13;
+
+non terminal Object[] p_list;
+non terminal HashMap<String,Double> prod_list;
+
+
+start with prog;
+
+
+// RULES SECTION
+prog ::= header SEP dresses_sec SEP shopping_sec;
+
+header::= t1 t2 | TOK2 SC  t13 | TOK2 SC t13 TOK2 SC t13;
+
+t1::= TOK1 SC TOK1 SC TOK1 SC | t1 TOK1 SC TOK1 SC;
+t2::=TOK2 SC TOK2 SC TOK2 SC | TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC |  TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC TOK2 SC;
+
+t13::= | t13 TOK1 SC | t13 TOK3 SC  ;
+
+dresses_sec::= dress dress dress | dresses_sec dress dress;
+
+
+
+dress::=QSTRING:name MINUS prod_list:tab SC{:
+                                                 //tab is the inner tab containing prod_name and prod_cost
+                                                //name is name of the dress
+                                                symbolTable.put(name,tab);
+                                                :};
+prod_list::= UINT:id QSTRING:name UREAL:price EURO{:
+                                                 //name is name of product
+                                                 HashMap tab2=new HashMap<String,Double>();
+                                                 tab2.put(name,price);
+
+                                                 RESULT=tab2;
+                                                 :} 
+| prod_list:tab CM UINT:id QSTRING:name UREAL:price EURO{:
+            
+                                                tab.put(name,price);
+
+                                                RESULT=tab;
+                                                :};
+
+
+
+shopping_sec::=purchase | shopping_sec purchase;
+
+purchase::= QSTRING:name UINT:percentage PERCENT MINUS 
+     {: MyClass obj= new MyClass(); obj.setVal1((String)parser.stack(-3)); obj.setVal2((Integer)parser.stack(-2)); RESULT=obj; 
+        /* stack(-3) contiene nome del vestito e stack(-2)  la percentuale*/:}
+      p_list:lObj SC                        {:
+                                                Double priceRounded = Math.round((Double)lObj[0] * 100.0) / 100.0;
+                                                 System.out.println("TOTAL: " +" " +priceRounded+" euro"+ " N_PROD: "+ lObj[1]);
+
+
+                                            :};
+
+p_list::= QSTRING:name UINT:quantity        {:
+                                                MyClass obj= (MyClass) parser.stack(-2);//ottengo i valori di dress name e percent
+
+                                                Integer perc=(Integer)obj.getVal2();
+                                                String dress_name=(String)obj.getVal1();
+                                                Double cost = (Double) symbolTable.get(dress_name).get(name);//get price of a product
+                                                Double price=cost*quantity*perc/100;
+                                                //object for the final result containig the total price and total quantity
+                                                Object[] o=new Object[2];
+                                                o[0]=price;
+                                                o[1]=quantity;
+                                                
+                                                Double priceRounded = Math.round(price * 100.0) / 100.0;
+                                                System.out.println(dress_name);
+                                                System.out.println(name +" " +priceRounded+" euro");
+                                                RESULT=o;
+                                                :}
+| p_list:tot_o CM QSTRING:name UINT:quantity    {:
+
+                                                MyClass obj= (MyClass) parser.stack(-4);//get dress name and percent
+                                    
+                                                Integer perc=obj.getVal2();
+                                                String dress_name=obj.getVal1();
+                                                Double cost = (Double) symbolTable.get(dress_name).get(name);//get price of a product
+                                    
+                                                Double price=cost*quantity*perc/100;
+                                    
+                                                Double priceRounded = Math.round(price * 100.0) / 100.0;
+                                    
+                                                System.out.println(name +" " +priceRounded+" euro");
+                                                
+                                                Double p= (Double) tot_o[0];
+                                                Integer n=(Integer) tot_o[1];
+                                                //create new object whit updated totals
+                                                Object[] o=new Object[2];
+                                                o[0]=p+price;
+                                                o[1]=n+quantity;
+                                                RESULT=o;
+                                                :};                                    
+
+
+
+
